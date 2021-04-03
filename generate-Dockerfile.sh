@@ -112,6 +112,14 @@ else
   echo "Set 'no-useful-packages', not installing stuff within src/Dockerfile.usefulpackages."
 fi
 
+echo "
+############################################################################
+############################ L1NNA packages ###############################
+############################################################################
+" >> $DOCKERFILE
+cat src/Dockerfile.l1nnapackages >> $DOCKERFILE
+
+
 # Copy the demo notebooks and change permissions
 cp -r extra/Getting_Started data
 chmod -R 755 data/

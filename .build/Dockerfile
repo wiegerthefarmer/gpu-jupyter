@@ -7,7 +7,8 @@
 
 # Use NVIDIA CUDA as base image and run the same installation as in the other packages.
 # The version of cudatoolkit must match those of the base image, see Dockerfile.pytorch
-FROM nvidia/cuda:10.1-cudnn7-runtime-ubuntu18.04
+# FROM nvidia/cuda:10.1-cudnn7-runtime-ubuntu18.04
+FROM nvidia/cuda:11.0-cudnn8-runtime-ubuntu18.04
 LABEL authors="Christoph Schranz <christoph.schranz@salzburgresearch.at>, Mathematical Michael <consistentbayes@gmail.com>"
 # This is a concatenated Dockerfile, the maintainers of subsequent sections may vary.
 RUN chmod 1777 /tmp && chmod 1777 /var/tmp
@@ -415,7 +416,7 @@ LABEL maintainer="Christoph Schranz <christoph.schranz@salzburgresearch.at>"
 # Install Tensorflow, check compatibility here: https://www.tensorflow.org/install/gpu
 # installation via conda leads to errors in version 4.8.2
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir "tensorflow==2.3.2" && \
+    pip install --no-cache-dir "tensorflow==2.4.1" && \
     pip install --no-cache-dir keras
 
 # Install PyTorch with dependencies
@@ -423,12 +424,12 @@ RUN conda install --quiet --yes \
     pyyaml mkl mkl-include setuptools cmake cffi typing
 
 # Check compatibility here: https://pytorch.org/get-started/locally/
-RUN conda install --quiet --yes \
-     pytorch \ 
-     torchvision \
-     cudatoolkit=10.1 -c pytorch
+#RUN conda install --quiet --yes \
+#     pytorch \ 
+#     torchvision \
+#     cudatoolkit=11.0 -c pytorch
 #    pip install torch_nightly -f https://download.pytorch.org/whl/nightly/cu90/torch_nightly.html && \
-RUN pip install  --no-cache-dir torchviz
+#RUN pip install  --no-cache-dir torchviz
 
 
 # Clean installation
@@ -470,6 +471,84 @@ RUN pip install --no-cache-dir jupyter_contrib_nbextensions \
   jupyter_nbextensions_configurator rise
 #  jupyter nbextension enable codefolding/main
 RUN jupyter labextension install @ijmbarr/jupyterlab_spellchecker
+
+RUN fix-permissions /home/$NB_USER
+
+# Switch back to jovyan to avoid accidental container runs as root
+USER $NB_UID
+
+############################################################################
+############################ L1NNA packages ###############################
+############################################################################
+
+LABEL authors="Christoph Schranz <christoph.schranz@salzburgresearch.at>, Mathematical Michael <consistentbayes@gmail.com>"
+
+USER root
+
+RUN pip install --no-cache-dir jupyter-server-proxy && \
+  jupyter serverextension enable --sys-prefix jupyter_server_proxy
+RUN jupyter serverextension enable --py jupyter_server_proxy
+RUN jupyter labextension install  @jupyterlab/server-proxy
+RUN pip install jupyter-vscode-proxy lief
+RUN curl -fsSL https://code-server.dev/install.sh | sh
+
+
+RUN jupyter labextension install  @lckr/jupyterlab_variableinspector
+RUN jupyter labextension install @jupyterlab/shortcutui
+
+
+
+# ssh ando thers
+RUN apt-get update
+RUN apt-get install -y openssh-client vim tmux upx-ucl file libmagic-dev  
+
+
+# nvtop
+RUN apt-get -y install cmake libncurses5-dev libncursesw5-dev git
+RUN git clone https://github.com/Syllo/nvtop.git
+RUN mkdir -p nvtop/build 
+RUN cd nvtop/build && cmake .. -DNVML_RETRIEVE_HEADER_ONLINE=True && make && make install
+
+RUN jupyter labextension install @shahinrostami/theme-purple-please
+RUN jupyter labextension install jupyterlab-theme-solarized-dark
+
+RUN conda install --quiet --yes \
+     nb_conda_kernels
+
+
+# ida:
+RUN dpkg --add-architecture i386 && apt-get -y update
+RUN apt-get -y install python3-pip
+
+RUN mkdir /ida 
+RUN mkdir /ida_install
+COPY ida.run /ida_install
+RUN chmod +x /ida_install/ida.run
+ARG IDA_PASSWORD
+RUN printf "\n\n\n\n\n\ny\n\ny\ny\n" | /ida_install/ida.run --installpassword $IDA_PASSWORD --prefix /ida
+USER $NB_UID
+ENV PATH "$PATH:/ida"
+RUN mkdir ~/.idapro
+RUN touch ~/.idapro/ida.reg
+RUN /usr/bin/python3 -m pip install --upgrade pip
+RUN /usr/bin/pip3 install git+https://github.com/L1NNA/JARV1S-Ghidra@master
+USER root
+
+
+# Chrome-driver
+RUN apt-get -y install chromium-browser xvfb
+RUN pip install PyVirtualDisplay selenium
+RUN mkdir /chromedriver 
+RUN wget https://chromedriver.storage.googleapis.com/89.0.4389.23/chromedriver_linux64.zip && unzip chromedriver_linux64.zip && cp chromedriver /chromedriver/
+RUN rm chromedriver_linux64.zip chromedriver
+ENV PATH "$PATH:/chromedriver"
+
+
+
+# Clean installation
+RUN conda clean --all -f -y && \
+    fix-permissions $CONDA_DIR && \
+    fix-permissions /home/$NB_USER
 
 RUN fix-permissions /home/$NB_USER
 

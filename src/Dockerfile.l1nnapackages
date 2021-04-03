@@ -1,0 +1,73 @@
+LABEL authors="Christoph Schranz <christoph.schranz@salzburgresearch.at>, Mathematical Michael <consistentbayes@gmail.com>"
+
+USER root
+
+RUN pip install --no-cache-dir jupyter-server-proxy && \
+  jupyter serverextension enable --sys-prefix jupyter_server_proxy
+RUN jupyter serverextension enable --py jupyter_server_proxy
+RUN jupyter labextension install  @jupyterlab/server-proxy
+RUN pip install jupyter-vscode-proxy lief
+RUN curl -fsSL https://code-server.dev/install.sh | sh
+
+
+RUN jupyter labextension install  @lckr/jupyterlab_variableinspector
+RUN jupyter labextension install @jupyterlab/shortcutui
+
+
+
+# ssh ando thers
+RUN apt-get update
+RUN apt-get install -y openssh-client vim tmux upx-ucl file libmagic-dev  
+
+
+# nvtop
+RUN apt-get -y install cmake libncurses5-dev libncursesw5-dev git
+RUN git clone https://github.com/Syllo/nvtop.git
+RUN mkdir -p nvtop/build 
+RUN cd nvtop/build && cmake .. -DNVML_RETRIEVE_HEADER_ONLINE=True && make && make install
+
+RUN jupyter labextension install @shahinrostami/theme-purple-please
+RUN jupyter labextension install jupyterlab-theme-solarized-dark
+
+RUN conda install --quiet --yes \
+     nb_conda_kernels
+
+
+# ida:
+RUN dpkg --add-architecture i386 && apt-get -y update
+RUN apt-get -y install python3-pip
+
+RUN mkdir /ida 
+RUN mkdir /ida_install
+COPY ida.run /ida_install
+RUN chmod +x /ida_install/ida.run
+ARG IDA_PASSWORD
+RUN printf "\n\n\n\n\n\ny\n\ny\ny\n" | /ida_install/ida.run --installpassword $IDA_PASSWORD --prefix /ida
+USER $NB_UID
+ENV PATH "$PATH:/ida"
+RUN mkdir ~/.idapro
+RUN touch ~/.idapro/ida.reg
+RUN /usr/bin/python3 -m pip install --upgrade pip
+RUN /usr/bin/pip3 install git+https://github.com/L1NNA/JARV1S-Ghidra@master
+USER root
+
+
+# Chrome-driver
+RUN apt-get -y install chromium-browser xvfb
+RUN pip install PyVirtualDisplay selenium
+RUN mkdir /chromedriver 
+RUN wget https://chromedriver.storage.googleapis.com/89.0.4389.23/chromedriver_linux64.zip && unzip chromedriver_linux64.zip && cp chromedriver /chromedriver/
+RUN rm chromedriver_linux64.zip chromedriver
+ENV PATH "$PATH:/chromedriver"
+
+
+
+# Clean installation
+RUN conda clean --all -f -y && \
+    fix-permissions $CONDA_DIR && \
+    fix-permissions /home/$NB_USER
+
+RUN fix-permissions /home/$NB_USER
+
+# Switch back to jovyan to avoid accidental container runs as root
+USER $NB_UID
