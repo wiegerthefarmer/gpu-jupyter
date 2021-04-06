@@ -500,10 +500,11 @@ RUN jupyter labextension install @jupyterlab/shortcutui
 
 # ssh ando thers
 RUN apt-get update
-RUN apt-get install -y openssh-client vim tmux upx-ucl file libmagic-dev  
+RUN apt-get install -y openssh-client vim tmux upx-ucl file libmagic-dev tree p7zip-full
 
 
 # nvtop
+RUN apt-get update
 RUN apt-get -y install cmake libncurses5-dev libncursesw5-dev git
 RUN git clone https://github.com/Syllo/nvtop.git
 RUN mkdir -p nvtop/build 
@@ -543,6 +544,36 @@ RUN wget https://chromedriver.storage.googleapis.com/89.0.4389.23/chromedriver_l
 RUN rm chromedriver_linux64.zip chromedriver
 ENV PATH "$PATH:/chromedriver"
 
+
+
+# RDT:
+USER root
+
+RUN apt-get -y update \
+ && apt-get install -y dbus-x11 \
+   xfce4 \
+   xfce4-panel \
+   xfce4-session \
+   xfce4-settings \
+   xorg 
+
+# Remove light-locker to prevent screen lock
+RUN wget 'https://sourceforge.net/projects/turbovnc/files/2.2.5/turbovnc_2.2.5_amd64.deb/download' -O turbovnc_2.2.5_amd64.deb && \
+   apt-get install -y -q ./turbovnc_2.2.5_amd64.deb && \
+   apt-get remove -y -q light-locker && \
+   rm ./turbovnc_2.2.5_amd64.deb && \
+   ln -s /opt/TurboVNC/bin/* /usr/local/bin/
+
+# apt-get may result in root-owned directories/files under $HOME
+RUN chown -R $NB_UID:$NB_GID $HOME
+
+RUN conda install -y -c conda-forge websockify
+RUN pip install git+https://github.com/L1NNA/jupyter-remote-desktop-proxy@main 
+RUN apt-get -y install gtk2-engines-murrine gtk2-engines-pixbuf sassc optipng inkscape ibglib2.0-dev-bin libglib2.0-dev libxml2-utils
+RUN git clone https://github.com/vinceliuice/WhiteSur-gtk-theme && \
+    git clone https://github.com/vinceliuice/WhiteSur-icon-theme && \
+    ./WhiteSur-gtk-theme/install.sh --nautilus-use-colors && \
+    ./WhiteSur-icon-theme/install.sh   
 
 
 # Clean installation
