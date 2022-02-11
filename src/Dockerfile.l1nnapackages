@@ -61,7 +61,9 @@ RUN wget https://chromedriver.storage.googleapis.com/89.0.4389.23/chromedriver_l
 RUN rm chromedriver_linux64.zip chromedriver
 ENV PATH "$PATH:/chromedriver"
 
-
+# install jvd package:
+RUN /usr/bin/python3 -m pip install git+https://github.com/L1NNA/JARV1S-Ghidra@master
+RUN python -m pip install git+https://github.com/L1NNA/JARV1S-Ghidra@master
 
 # RDT:
 USER root
@@ -87,10 +89,18 @@ RUN chown -R $NB_UID:$NB_GID $HOME
 RUN conda install -y -c conda-forge websockify
 RUN pip install git+https://github.com/L1NNA/jupyter-remote-desktop-proxy@main 
 RUN apt-get -y install gtk2-engines-murrine gtk2-engines-pixbuf sassc optipng inkscape ibglib2.0-dev-bin libglib2.0-dev libxml2-utils
-RUN git clone https://github.com/vinceliuice/WhiteSur-gtk-theme && \
+RUN git clone https://github.com/vinceliuice/WhiteSur-gtk-theme && cd WhiteSur-gtk-theme && git checkout 422060b7db13fc3143146f62abb2c102039f06c3 && cd .. && \
     git clone https://github.com/vinceliuice/WhiteSur-icon-theme && \
     ./WhiteSur-gtk-theme/install.sh --nautilus-use-colors && \
     ./WhiteSur-icon-theme/install.sh   
+
+
+# torch:
+
+RUN pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html
+RUN pip install torch-scatter -f https://pytorch-geometric.com/whl/torch-1.9.0+cu111.html
+RUN pip install torch-sparse -f https://pytorch-geometric.com/whl/torch-1.9.0+cu111.html
+RUN pip install torch-geometric
 
 
 # Clean installation
