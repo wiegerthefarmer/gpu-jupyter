@@ -10,8 +10,8 @@ RUN pip install jupyter-vscode-proxy lief
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 
 
-RUN jupyter labextension install  @lckr/jupyterlab_variableinspector
-RUN jupyter labextension install @jupyterlab/shortcutui
+# RUN jupyter labextension install  @lckr/jupyterlab_variableinspector
+# RUN jupyter labextension install @jupyterlab/shortcutui
 
 
 
@@ -21,11 +21,11 @@ RUN apt-get install -y openssh-client vim tmux upx-ucl file libmagic-dev tree p7
 
 
 # nvtop
-RUN apt-get update
-RUN apt-get -y install cmake libncurses5-dev libncursesw5-dev git
-RUN git clone https://github.com/Syllo/nvtop.git
-RUN mkdir -p nvtop/build 
-RUN cd nvtop/build && cmake .. -DNVML_RETRIEVE_HEADER_ONLINE=True && make && make install
+# RUN apt-get update
+# RUN apt-get -y install cmake libncurses5-dev libncursesw5-dev git
+# RUN git clone https://github.com/Syllo/nvtop.git
+# RUN mkdir -p nvtop/build 
+# RUN cd nvtop/build && cmake .. -DNVML_RETRIEVE_HEADER_ONLINE=True && make && make install
 
 RUN jupyter labextension install @shahinrostami/theme-purple-please
 RUN jupyter labextension install jupyterlab-theme-solarized-dark
@@ -49,7 +49,7 @@ ENV PATH "$PATH:/ida"
 RUN mkdir ~/.idapro
 RUN touch ~/.idapro/ida.reg
 RUN /usr/bin/python3 -m pip install --upgrade pip
-RUN /usr/bin/pip3 install git+https://github.com/L1NNA/JARV1S-Ghidra@master
+RUN /usr/bin/pip3 install git+https://github.com/L1NNA/JARV1S-Ghidra@master autopep8 pylint
 USER root
 
 
@@ -62,8 +62,8 @@ RUN rm chromedriver_linux64.zip chromedriver
 ENV PATH "$PATH:/chromedriver"
 
 # install jvd package:
-RUN /usr/bin/python3 -m pip install git+https://github.com/L1NNA/JARV1S-Ghidra@master
-RUN python -m pip install git+https://github.com/L1NNA/JARV1S-Ghidra@master
+# RUN /usr/bin/python3 -m pip install git+https://github.com/L1NNA/JARV1S-Ghidra@master
+RUN python -m pip install git+https://github.com/L1NNA/JARV1S-Ghidra@master autopep8 pylint
 
 # RDT:
 USER root
@@ -97,10 +97,10 @@ RUN git clone https://github.com/vinceliuice/WhiteSur-gtk-theme && cd WhiteSur-g
 
 # torch:
 
-RUN pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html
-RUN pip install torch-scatter -f https://pytorch-geometric.com/whl/torch-1.9.0+cu111.html
-RUN pip install torch-sparse -f https://pytorch-geometric.com/whl/torch-1.9.0+cu111.html
-RUN pip install torch-geometric
+# RUN pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html
+# RUN pip install torch-scatter -f https://pytorch-geometric.com/whl/torch-1.9.0+cu111.html
+# RUN pip install torch-sparse -f https://pytorch-geometric.com/whl/torch-1.9.0+cu111.html
+# RUN pip install torch-geometric
 
 
 # Clean installation
