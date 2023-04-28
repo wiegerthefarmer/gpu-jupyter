@@ -107,7 +107,7 @@ RUN echo "auth requisite pam_deny.so" >> /etc/pam.d/su && \
 USER ${NB_UID}
 
 # Pin python version here, or set it to "default"
-ARG PYTHON_VERSION=3.10
+ARG PYTHON_VERSION=3.9
 
 # Setup work directory for backward-compatibility
 RUN mkdir "/home/${NB_USER}/work" && \
@@ -146,8 +146,8 @@ RUN set -x && \
         "${PYTHON_SPECIFIER}" \
         'mamba' \
         'notebook' \
-        'jupyterhub' \
-        'jupyterlab' && \
+        'jupyterhub=1.3.0' \
+        'jupyterlab=2.2.9' && \
     rm micromamba && \
     # Pin major.minor version of python
     mamba list python | grep '^python ' | tr -s ' ' | cut -d ' ' -f 1,2 >> "${CONDA_DIR}/conda-meta/pinned" && \
@@ -448,6 +448,8 @@ RUN pip install --upgrade pip && \
     fix-permissions "/home/${NB_USER}"
 
 # Install PyTorch with dependencies
+RUN conda install -n base conda-libmamba-solver
+RUN conda config --set solver libmamba
 RUN conda install --quiet --yes \
     pyyaml mkl mkl-include setuptools cmake cffi typing && \
     conda clean --all -f -y && \
@@ -461,7 +463,7 @@ RUN conda install --quiet --yes \
 #     torchviz==0.0.2 --extra-index-url https://download.pytorch.org/whl/cu116
 RUN set -ex \
  && buildDeps='torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118' \
- && pip install --no-cache-dir $buildDeps --extra-index-url https://download.pytorch.org/whl/cu116 \
+ && pip install --no-cache-dir $buildDeps \
  && fix-permissions "${CONDA_DIR}" \
  && fix-permissions "/home/${NB_USER}"
 
@@ -509,12 +511,12 @@ RUN set -ex \
  && fix-permissions "/home/${NB_USER}"
 
 # upgrade jupyter-server for compatibility
-RUN pip install --no-cache-dir --upgrade \
-    distributed==2023.3.0 \
-    jupyter-server==2.4 \
-    # fix permissions of conda
- && fix-permissions "${CONDA_DIR}" \
- && fix-permissions "/home/${NB_USER}"
+# RUN pip install --no-cache-dir --upgrade \
+#    distributed==2023.3.0 \
+#    jupyter-server==2.4 \
+#    # fix permissions of conda
+# && fix-permissions "${CONDA_DIR}" \
+# && fix-permissions "/home/${NB_USER}"
 
 RUN pip install --no-cache-dir \
     # install extension manager
@@ -546,10 +548,14 @@ LABEL authors="Steven Ding"
 
 USER root
 
-RUN pip install --no-cache-dir jupyter-server-proxy && \
+# ad-hoc fix for compatibility to the cluster
+RUN pip install jupyterhub==1.3.0 jupyterlab==2.2.9 jupyter-server==1.13.5 
+
+RUN pip install --no-cache-dir jupyter-server-proxy==3.2.1 && \
   jupyter serverextension enable --sys-prefix jupyter_server_proxy
 RUN jupyter serverextension enable --py jupyter_server_proxy
-RUN jupyter labextension install  @jupyterlab/server-proxy
+ENV NODE_OPTIONS=--openssl-legacy-provider
+RUN jupyter labextension install --log-level=0 @jupyterlab/server-proxy@3.2.1
 RUN pip install jupyter-vscode-proxy lief
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 
@@ -562,7 +568,7 @@ RUN curl -fsSL https://code-server.dev/install.sh | sh
 # ssh ando thers
 RUN apt-get update
 RUN apt-get install -y openssh-client vim tmux upx-ucl file libmagic-dev tree p7zip-full
-RUN apt-get install -y libtool autoconf automake=v1.16.3 ppa libpython3.9-dev gcc=v9.4.0
+# RUN apt-get install -y libtool autoconf automake=1.16.3 ppa libpython3.9-dev gcc=9.4.0
 
 
 RUN jupyter labextension install @shahinrostami/theme-purple-please
@@ -592,7 +598,10 @@ RUN conda install --quiet --yes \
 
 
 # Chrome-driver
-RUN apt-get -y install chromium-browser xvfb
+RUN curl -LO https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+RUN apt-get install -y ./google-chrome-stable_current_amd64.deb
+RUN rm google-chrome-stable_current_amd64.deb 
+
 RUN pip install PyVirtualDisplay selenium
 RUN mkdir /chromedriver 
 RUN wget https://chromedriver.storage.googleapis.com/89.0.4389.23/chromedriver_linux64.zip && unzip chromedriver_linux64.zip && cp chromedriver /chromedriver/
@@ -635,13 +644,25 @@ RUN git clone https://github.com/vinceliuice/WhiteSur-gtk-theme && cd WhiteSur-g
 
 # torch:
 RUN pip install torch_geometric
-RUN pip install pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.0.0+cu118.html
-# RUN pip install torch-scatter -f https://pytorch-geometric.com/whl/torch-1.9.0+cu111.html
-# RUN pip install torch-sparse -f https://pytorch-geometric.com/whl/torch-1.9.0+cu111.html
-# RUN pip install torch-geometric
+RUN pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.0.0+cu118.html
 
+
+RUN apt-get install -y nvtop
+
+# other dev tools
+RUN apt-get install  -y -q  libtool autoconf automake
+RUN apt-get install  -y -q  software-properties-common
+RUN add-apt-repository ppa:deadsnakes/ppa
+RUN add-apt-repository ppa:deadsnakes/ppa
+RUN apt-get install -y -q libpython3.9-dev
+RUN add-apt-repository ppa:ubuntu-toolchain-r/test
+RUN apt-get update
+RUN apt-get -y -q install gcc-9
 
 # Clean installation
+ENV NODE_OPTIONS=
+RUN update-alternatives --install /usr/bin/x-www-browser x-www-browser /usr/bin/google-chrome 500
+RUN update-alternatives --set x-www-browser /usr/bin/google-chrome
 RUN conda clean --all -f -y && \
   fix-permissions $CONDA_DIR && \
   fix-permissions /home/$NB_USER
