@@ -264,6 +264,9 @@ RUN apt-get update --yes && \
 
 USER ${NB_UID}
 
+# AV set conda timeout
+RUN conda config --set remote_read_timeout_secs 99999
+
 # Install Python 3 packages
 RUN mamba install --quiet --yes \
     'altair' \
